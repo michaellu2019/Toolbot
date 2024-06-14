@@ -1,0 +1,23 @@
+% world constants
+g = 9.8;
+
+% vehicle parameters
+m = 100;
+v = 2;
+
+eff_chain = 0.96;
+eff_treads = 0.7;
+
+alpha_incline = 10;
+
+r_wheel = 0.5 * 80/1000;
+
+omega = v/r_wheel;
+omega_rpm = omega * 60/(2 * pi())
+
+c_rr = 0.1;
+F_rr = c_rr * m * g;
+
+T = F_rr * r_wheel
+
+P = F_rr * v

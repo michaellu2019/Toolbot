@@ -1,0 +1,26 @@
+plot_size = 10;
+x = 0:plot_size;
+y = linspace(0, 0, plot_size+1);
+axis_limits = [0 plot_size -plot_size * 0.3 plot_size * 0.3];
+
+axis equal;
+hold on;
+
+time = out.y_data.time;
+ground_values = out.y_data.signals(1).values;
+y_values = out.y_data.signals(2).values;
+theta_values = out.theta_data.signals(2).values;
+N = size(time, 1);
+
+for ii = 1:N
+    scaled_y_value = y_values(ii) * 100;
+    scaled_theta_value = theta_values(ii) * 10;
+
+    axis equal;
+plot(x, y);
+    plot([plot_size * 0.3, plot_size * 0.6], [ii, ii], 'k', 'LineWidth', 2);
+    axis(axis_limits);
+    hold off;
+
+    pause(0.02);
+end
