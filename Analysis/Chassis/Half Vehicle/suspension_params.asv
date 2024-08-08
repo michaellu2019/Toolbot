@@ -1,0 +1,141 @@
+% world constants
+g = 9.8;
+
+% vehicle parameters
+m = 100;
+L = 0.8;
+v = 0.5;
+l1 = 0.3;
+l2 = 0.1;
+l3 = -l2;
+l4 = -l1;
+
+% road parameters
+t_offset = 2;
+h_0 = 0;
+h_bump = 0.03;
+w_bump = 0.03;
+t_bump = w_bump/v;
+t_delay = (l1 - l2)/v;
+T = 20;
+D = (w_bump/v)/T * 100;
+
+% torsion bar parameters
+E_st = 200.0e9;
+G_st = 76.6e9;
+G_al = 26.9e9;
+G_ny = 3.9e9;
+
+N = 8;
+alpha = pi/4;
+r = 0.05;
+l = 0.3;
+l_b = l - 0.085;
+l_f = (l + l_b)/2;
+d = 6/1000;
+
+I = d^4/12;
+J = (2 * d^4)/12;
+J_k = 2.25 * (d/2)^4;
+G = G_st;
+
+F = (m * g)/N;
+T = F * r * cos(alpha);
+phi = (T * l)/(G * J_k);
+k_r = (G * J_k)/l;
+k_t = (G * J_k)/(r^2 * sin(alpha) * l);
+
+y_0 = r * sin(alpha);
+dy = r * sin(phi);
+dy_y0_pct = dy/y_0 * 100;
+
+syms Ry_var Ri_var Ro_var Mz_var x % E I l l_b F
+Fy_eqn = Ry_var + Ri_var + Ro_var + F;
+Mz_wall_eqn = Ri_var * l_b + F * l_f + Ro_var * l - Mz_var;
+
+V_bi_eqn = Ry_var;
+M_bi_eqn = Mz_var + Ry_var * x;
+theta_bi_eqn = 0 + 1/(E_st * I) * int(M_bi_eqn, [0 x]);
+v_bi_eqn = 0 + int(theta_bi_eqn, [0 x]);
+theta_bi = 0 + 1/(E_st * I) * int(M_bi_eqn, [0 l]);
+v_bi = 0 + int(theta_bi_eqn, [0 l_b]);
+
+V_f_eqn = Ry_var + Ri_var;
+M_f_eqn = Mz_var + Ry_var * x + Ri_var * (x - l_b);
+theta_f_eqn = theta_bi + 1/(E_st * I) * int(M_f_eqn, [l_b x]);
+v_f_eqn = v_bi + int(theta_f_eqn, [l_b x]);
+theta_f = theta_bi + 1/(E_st * I) * int(M_f_eqn, [l_b l_f]);
+v_f = v_bi + int(theta_f_eqn, [l_b l_f]);
+
+V_bo_eqn = Ry_var + Ri_var + F;
+M_bo_eqn = Mz_var + Ry_var * x + Ri_var * (x - l_b) + F * (x - l_f);
+theta_bo_eqn = theta_f + 1/(E_st * I) * int(M_bo_eqn, [l_f x]);
+v_bo_eqn = v_f + int(theta_bo_eqn, [l_f x]);
+theta_bo = theta_f + 1/(E_st * I) * int(M_bo_eqn, [l_f l]);
+v_bo = v_f + int(theta_bo_eqn, [l_f l]);
+
+sol = solve([Fy_eqn == 0, Mz_wall_eqn == 0, v_bi == 0, v_bo == 0], [Ry_var, Ri_var, Ro_var, Mz_var]);
+Ry = vpa(sol.Ry_var);
+Ri = vpa(sol.Ri_var);
+Ro = vpa(sol.Ro_var);
+Mz = vpa(sol.Mz_var);
+
+V1_eqn = subs(V_bi_eqn, {Ry_var}, {Ry});
+M1_eqn = subs(M_bi_eqn, {Ry_var, Mz_var}, {Ry, Mz});
+theta1_eqn = subs(theta_bi_eqn, {Ry_var, Mz_var}, {Ry, Mz});
+v1_eqn = subs(v_bi_eqn, {Ry_var, Mz_var}, {Ry, Mz});
+tau1_avg_eqn = (3 * V1_eqn)/(2 * d^2);
+
+V2_eqn = subs(V_f_eqn, {Ry_var, Ri_var}, {Ry, Ri});
+M2_eqn = subs(M_f_eqn, {Ry_var, Ri_var, Mz_var}, {Ry, Ri, Mz});
+theta2_eqn = subs(theta_f_eqn, {Ry_var, Ri_var, Mz_var}, {Ry, Ri, Mz});
+v2_eqn = subs(v_f_eqn, {Ry_var, Ri_var, Mz_var}, {Ry, Ri, Mz});
+tau2_avg_eqn = (3 * V2_eqn)/(2 * d^2);
+
+V3_eqn = subs(V_bo_eqn, {Ry_var, Ri_var}, {Ry, Ri});
+M3_eqn = subs(M_bo_eqn, {Ry_var, Ri_var, Mz_var}, {Ry, Ri, Mz});
+theta3_eqn = subs(theta_bo_eqn, {Ry_var, Ri_var, Mz_var}, {Ry, Ri, Mz});
+v3_eqn = subs(v_bo_eqn, {Ry_var, Ri_var, Mz_var}, {Ry, Ri, Mz});
+tau3_avg_eqn = (3 * V3_eqn)/(2 * d^2);
+
+x1 = linspace(0, l_b, 100 * (l_b/l));
+x2 = linspace(l_b, l_f, 100 * (l_f - l_b)/l);
+x3 = linspace(l_f, l, 100 * (l - l_f)/l);
+
+figure;
+subplot(2, 2, 1);
+plot(x1, double(subs(V1_eqn, x, x1)), 'b', x2, double(subs(V2_eqn, x, x2)), 'g', x3, double(subs(V3_eqn, x, x3)), 'r');
+grid on;
+xlabel('x (m)');
+ylabel('V(x) (N)');
+title('Shear of Torsion Bar');
+
+subplot(2, 2, 2);
+plot(x1, double(subs(M1_eqn, x, x1)), 'b', x2, double(subs(M2_eqn, x, x2)), 'g', x3, double(subs(M3_eqn, x, x3)), 'r');
+grid on;
+xlabel('x (m)');
+ylabel('M(x) (Nm)');
+title('Moment of Torsion Bar');
+
+subplot(2, 2, 3);
+plot(x1, 180/pi() * double(subs(theta1_eqn, x, x1)), 'b', x2, 180/pi() * double(subs(theta2_eqn, x, x2)), 'G', x3, 180/pi() * double(subs(theta3_eqn, x, x3)), 'r');
+grid on;
+xlabel('x (m)');
+ylabel('theta(x) (deg)');
+title('Angle of Torsion Bar');
+
+subplot(2, 2, 4 );
+plot(x1, 1000 * double(subs(v1_eqn, x, x1)), 'b', x2, 1000 * double(subs(v2_eqn, x, x2)), 'g', x3, 1000 * double(subs(v3_eqn, x, x3)), 'r');
+grid on;
+xlabel('x (m)');
+ylabel('v(x) (mm)');
+title('Deflection of Torsion Bar');
+
+figure;
+subplot(2, 2, 1);
+plot(x1, double(subs(tau1_avg_eqn, x, x1)), 'b', x2, double(subs(tau2_avg_eqn, x, x2)), 'g', x3, double(substau1_avg_eqnV3_eqn, x, x3)), 'r');
+grid on;
+xlabel('x (m)');
+ylabel('V(x) (N)');
+title('Shear Stress of Torsion Bar');
+
